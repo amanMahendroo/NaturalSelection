@@ -10,6 +10,13 @@ class Food {
 	}
 
 	show() {
+		bots.map((c) => {
+			if (sqDist(this.pos.x, this.pos.y, c.pos.x, c.pos.y) < 25) {
+				this.eaten = true
+				c.hunger = max(c.hunger - .2, 0)
+			}
+		})
+
 		fill(0, 255, 136)
 		noStroke()
 		ellipse(this.pos.x, this.pos.y, 5)

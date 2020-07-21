@@ -2,7 +2,7 @@ function setup() {
 	createCanvas(700, 700)
 	terrain = new Terrain(Math.ceil(width / poly), Math.ceil(height / poly))
 	bots = new Array(5).fill(0)
-	bots = bots.map(() => new Bot(width, height))
+	bots = bots.map(() => new Bot(random(width), random(height), random(), random(), random(), floor(random(600))))
 	food = new Array(50).fill(0)
 	food = food.map(() => new Food(width, height))
 	ellipseMode(CENTER)
@@ -14,7 +14,7 @@ function draw() {
 	terrain.show()
 	bots.map((c) => c.show())
 	food.map((c) => c.show())
-	if (random() < 0.02) {
+	if (random() < 0.2) {
 		food.push(new Food(width, height))
 	}
 	for (var i = 0; i < food.length; i++) {
