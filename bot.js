@@ -21,8 +21,73 @@ class Bot {
 		this.born()
 	}
 
-	show() {
-		// Essentials - do life stuff i.e., grow, die, get hungry, get thirsty & slow down in water
+	callMate() {
+		let sqD = sqDist(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y)
+		let bool = random() < this.dna.attractiveness / this.target.dna.attractiveness
+		if (sqD < 2500 && !this.target.pregnant && bool && this.target.urge > 0.4) {
+			this.target.target = this
+		}
+		if (sqD < 100 && !this.target.pregnant) {
+			console.log("%c" + this.id + " mated with " + this.target.id, 'color:#f08')
+			this.target.pregnant = this.target.dna.birthTime
+			this.target.partnerDna = this.dna
+			this.urge = 0
+			this.target.urge = 0
+			this.target.target = undefined
+			this.target = undefined
+		}
+	}
+
+	findMate() {
+		let possibleMates = []
+		let sum = 0
+		bots.map((c) => {
+			if (c.gender && !c.pregnant) {
+				possibleMates.push(c)
+				sum += c.dna.attractiveness
+			}
+		})
+		let sum1 = 0, x = random(sum)
+		for (var i = 0; i < possibleMates.length; i++) {
+			sum1 += possibleMates[i].dna.attractiveness
+			if (sum1 > x) {
+				this.target = possibleMates[i]
+				break
+			}
+		}
+	}
+
+	findFood() {
+		let possibleFoods = []
+		food.map((c) => {
+			if (sqDist(this.pos.x, this.pos.y, c.pos.x, c.pos.y) < 2500) {
+				possibleFoods.push(c)
+			}
+		})
+
+		if (possibleFoods.length) {
+			this.target = possibleFoods[floor(random(possibleFoods.length))]
+		}
+	}
+
+	findWater() {
+		let cells = [[-2, 0], [-1, 0], [-1, -1], [0, -1], [0, -2], [1, -1], 
+		[2, 0], [1, 0], [1, 1], [0, 1], [0, 2], [-1, 1], ]
+		let current = [floor(this.pos.x / poly), floor(this.pos.y / poly)]
+		for (var i = 0; i < cells.length; i++) {
+			if (terrain.grid[current[0] + cells[i][0]]) {
+				if (terrain.grid[current[0] + cells[i][0]][current[1] + cells[i][1]] == 1) {
+					let _i = (current[0] + cells[i][0] + random()) * poly
+					let _j = (current[1] + cells[i][1] + random()) * poly
+					this.target = {
+						pos: createVector(_i, _j)
+					}
+				}
+			}
+		}
+	}
+
+	exist() {
 		this.dead = this.hunger >= 1 || this.thirst >= 1
 		this.age = min(this.age + 0.001, 1)
 
@@ -30,7 +95,7 @@ class Bot {
 			if (terrain.grid[floor(this.pos.y /  poly)]) {
 				if (terrain.grid[floor(this.pos.x / poly)][floor(this.pos.y / poly)] > 0.99) {
 					this.thirst = max(0, this.thirst - 0.01)
-					this.maxVel = 0.2
+					this.maxVel = 0.4
 				} else {
 					this.maxVel = 1
 				}
@@ -38,11 +103,14 @@ class Bot {
 		}
 
 		this.maxVel /= this.age
-		this.thirst = min(1, this.thirst + 0.0001)
-		this.hunger = min(this.hunger + 0.001, 1)
-		this.pregnant = max(this.pregnant - 1, 0)
+		if (this.pregnant) {
+			this.maxVel = 0.8
+		}
+		this.thirst = min(1, this.thirst + 0.0006 * (1 - this.dna.survivability * this.age))
+		this.hunger = min(1, this.hunger + 0.002 * (1 - this.dna.survivability * this.age))
+		this.pregnant = max(0, this.pregnant - 1)
 		if (this.age > .6 && !this.pregnant) {
-			this.urge = min(1, this.urge + 0.001)
+			this.urge = min(1, this.urge + 0.002 * this.dna.matingUrge)
 		}
 		if (this.pregnant == 1) {
 			this.reproduce()
@@ -53,8 +121,9 @@ class Bot {
 				}
 			}
 		}
+	}
 
-		// Survival - Look for food & water
+	survive() {
 		if (this.target) {
 			if (this.target.eaten || this.target.pregnant) {
 				this.target = undefined
@@ -62,16 +131,12 @@ class Bot {
 		}
 		if (this.target) {
 			if (this.target.gender) {
-				if (sqDist(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y) < 2500 && !this.target.pregnant) {
-					this.target.target = this
-				}
-				if (sqDist(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y) < 100 && !this.target.pregnant) {
-					console.log(this.id + " mated with " + this.target.id)
-					this.target.pregnant = this.target.dna.birthTime
-					this.target.partnerDna = this.dna
-					this.urge = 0
-					this.target.urge = 0
-					this.target.target = undefined
+				this.callMate()
+			}
+		}
+		if (this.target) {
+			if (this.target.eaten == undefined && this.target.gender == undefined) {
+				if (this.thirst < .2) {
 					this.target = undefined
 				}
 			}
@@ -79,37 +144,18 @@ class Bot {
 
 		if (!this.target) {
 			if (!this.gender && this.urge > this.hunger && this.urge > this.thirst) {
-				let possibleMates = []
-				let sum = 0
-				bots.map((c) => {
-					if (c.gender && !c.pregnant) {
-						possibleMates.push(c)
-						sum += c.dna.attractiveness
-					}
-				})
-				let sum1 = 0, x = random(sum)
-				for (var i = 0; i < possibleMates.length; i++) {
-					sum1 += possibleMates[i].dna.attractiveness
-					if (sum1 > x) {
-						this.target = possibleMates[i]
-						break
-					}
-				}
+				this.findMate()
 			} else {
-				let possibleFoods = []
-				food.map((c) => {
-					if (sqDist(this.pos.x, this.pos.y, c.pos.x, c.pos.y) < 2500) {
-						possibleFoods.push(c)
-					}
-				})
-
-				if (possibleFoods.length) {
-					this.target = possibleFoods[floor(random(possibleFoods.length))]
+				if (this.hunger > this.thirst) {
+					this.findFood()
+				} else {
+					this.findWater()
 				}
 			}
 		}
+	}
 
-		// Reaction - Steer towards food & water or move randomly
+	react() {
 		let dir
 		if (this.target) {
 			dir = this.target.pos
@@ -121,6 +167,17 @@ class Bot {
 		let desired = p5.Vector.sub(dir, this.pos)
 		let steer = p5.Vector.sub(desired, this.vel).setMag(0.1)
 		this.pos.add(this.vel.add(steer).setMag(this.maxVel))
+	}
+
+	show() {
+		// Essentials - do life stuff i.e., grow, die, get hungry, get thirsty & slow down in water
+		this.exist()
+		
+		// Survival - Look for food, water and mates
+		this.survive()
+
+		// Reaction - Steer towards target or move randomly
+		this.react()
 
 		// Get drawn in the environment
 		this.draw()
@@ -133,10 +190,11 @@ class Bot {
 			if (this.pregnant) {
 				stroke(255, 0, 0)
 			}
-			fill(255, 203, 164)
+			fill(lerpColor(color(181, 101, 33), color(255), this.dna.attractiveness))
 		} else {
+			fill(lerpColor(color(181, 101, 33), color(255, 0, 0), this.dna.attractiveness))
 			stroke(131, 67, 33)	
-			fill(181, 101, 33)
+			// fill(181, 101, 33)
 		}
 		ellipse(this.pos.x, this.pos.y, 20 * this.age)
 		ellipse(this.pos.x, this.pos.y + 5 * this.age, 5 * this.age, 1 * this.age)
@@ -157,7 +215,8 @@ class Bot {
 	}
 
 	born() {
-		console.log(this.id + " was born at the " + frameCount + "th frame!")
+		let x = this.gender ? 'It\'s a girl! ' : 'It\'s a boy! '
+		console.log("%c" + x + this.id + " was born at the " + frameCount + "th frame!", 'color: green')
 	}
 
 	die() {
@@ -171,7 +230,7 @@ class Bot {
 		let str = "RIP " + this.id + "\n"
 		str += (this.gender) ? "F " : "M "
 		str += floor(100 * this.age) + "\n"
-		console.log(str + "Cause of death: " + cause)
+		console.log("%c" + str + "Cause of death: " + cause, 'color: red; font-weight: bold')
 		// console.log(this)
 	}
 
@@ -195,13 +254,18 @@ class DNA {
 		this.survivability = _s
 		this.birthTime = _b
 		this.survivability *= this.birthTime / 600
+		this.attractiveness *= this.survivability
 	}
 }
 
 function avg(a, b) {
-	return (a + b) / 2
+	return contain(((a + b) / 2) * random(.9, 1.1))
 }
 
 function sqDist(a, b, c, d) {
 	return (a - c) * (a - c) + (b - d) * (b - d)
+}
+
+function contain(x) {
+	return min(1, max(0, x))
 }
