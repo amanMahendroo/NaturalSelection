@@ -28,7 +28,7 @@ class Bot {
 			this.target.target = this
 		}
 		if (sqD < 100 && !this.target.pregnant) {
-			console.log("%c" + this.id + " mated with " + this.target.id, 'color:#f08')
+			newUpdate('<b>' + this.id + " </b>mated with <b>" + this.target.id + '</b>', 'pink')
 			this.target.pregnant = this.target.dna.birthTime
 			this.target.partnerDna = this.dna
 			this.urge = 0
@@ -215,8 +215,9 @@ class Bot {
 	}
 
 	born() {
-		let x = this.gender ? 'It\'s a girl! ' : 'It\'s a boy! '
-		console.log("%c" + x + this.id + " was born at the " + frameCount + "th frame!", 'color: green')
+		let x = this.gender ? 'It\'s a <b>girl</b>! ' : 'It\'s a <b>boy</b>! '
+		newUpdate('' + x + '<b>' + this.id + "</b> was born at the <b>" + frameCount + "</b>th frame!", 'green')
+		
 	}
 
 	die() {
@@ -227,10 +228,10 @@ class Bot {
 		if (this.thirst > .99) { 
 			cause = "thirst" 
 		}
-		let str = "RIP " + this.id + "\n"
+		let str = "RIP <b>" + this.id + "<br />"
 		str += (this.gender) ? "F " : "M "
-		str += floor(100 * this.age) + "\n"
-		console.log("%c" + str + "Cause of death: " + cause, 'color: red; font-weight: bold')
+		str += floor(100 * this.age) + "</b><br />"
+		newUpdate("" + str + "Cause of death: <b>" + cause + '</b>', 'red')
 		// console.log(this)
 	}
 
